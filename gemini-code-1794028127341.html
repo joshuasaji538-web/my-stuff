@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NearbyStock - Local Stock, Right Now</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col justify-between">
+
+  <div>
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 py-3 flex items-center justify-between shadow-xs">
+      <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+        <span class="font-bold text-lg tracking-tight text-slate-900">NearbyStock</span>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <!-- Role Switcher -->
+        <div class="bg-slate-100 p-1 rounded-xl flex text-xs font-semibold">
+          <button onclick="switchRole('consumer')" id="roleConsumerBtn" class="px-3 py-1.5 rounded-lg bg-white shadow-xs text-slate-900 transition-all">Consumer</button>
+          <button onclick="switchRole('seller')" id="roleSellerBtn" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-900 transition-all">Seller Hub</button>
+        </div>
+
+        <!-- Auth Button -->
+        <button onclick="openAuthModal()" id="authButton" class="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-xs">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.344-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c7.058 0 11.738-4.964 11.738-11.96 0-.828-.088-1.458-.198-2.235H12.24z"/></svg>
+          <span id="authButtonText">Sign in</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+
+      <!-- CONSUMER VIEW -->
+      <div id="consumerView" class="space-y-6">
+        <!-- Hero Banner -->
+        <section class="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+          <div class="absolute top-4 right-4 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            OPEN TODAY
+          </div>
+          <p class="text-xs font-bold tracking-wider text-emerald-400 uppercase mb-1">Local Stock, Right Now</p>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">Find what you need.<br>Before you go.</h1>
+          <p class="text-slate-300 text-sm max-w-md">See which nearby local stores are open and have your item in stock.</p>
+        </section>
+
+        <!-- Search & Location bar -->
+        <section class="space-y-3">
+          <div class="relative">
+            <input type="text" id="searchInput" oninput="filterStores()" placeholder="Search items (e.g., Milk, Bread, Rice, Tool)..." 
+              class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-xs focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+            <svg class="w-5 h-5 text-slate-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+
+          <!-- Location Indicator -->
+          <div class="flex items-center justify-between text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              </svg>
+              <div>
+                <span id="locationText" class="font-medium text-slate-800">Using default location (Kottayam, KL)</span>
+                <span id="currencyBadge" class="ml-2 bg-sky-50 text-sky-700 px-2 py-0.5 rounded font-bold border border-sky-100">Currency: ₹ INR</span>
+              </div>
+            </div>
+            <button onclick="detectLocation()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 px-3 py-1.5 rounded-lg font-semibold transition-all">Locate me</button>
+          </div>
+        </section>
+
+        <!-- Filter Section -->
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Filter by Category</h2>
+            <span class="text-xs text-slate-400" id="storeCountLabel">Showing all stores</span>
+          </div>
+          <!-- Category Pills -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none text-xs">
+            <button onclick="filterCategory('All')" id="cat-All" class="px-3.5 py-2 bg-slate-900 text-white rounded-lg font-medium whitespace-nowrap shadow-xs transition-all">All categories</button>
+            <button onclick="filterCategory('Groceries')" id="cat-Groceries" class="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium whitespace-nowrap transition-all">Groceries</button>
+            <button onclick="filterCategory('Pharmacy')" id="cat-Pharmacy" class="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium whitespace-nowrap transition-all">Pharmacy</button>
+            <button onclick="filterCategory('Hardware')" id="cat-Hardware" class="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium whitespace-nowrap transition-all">Hardware</button>
+            <button onclick="filterCategory('Household')" id="cat-Household" class="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium whitespace-nowrap transition-all">Household</button>
+          </div>
+        </section>
+
+        <!-- Nearby Stores Feed -->
+        <section class="space-y-4">
+          <div class="flex justify-between items-baseline border-b border-slate-200 pb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Nearby Results</h3>
+            <div class="flex items-center gap-3 text-xs text-slate-500 font-medium">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Open</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400 inline-block"></span>Closed</span>
+            </div>
+          </div>
+
+          <div id="storesContainer" class="space-y-3">
+            <!-- Dynamically populated store items -->
+          </div>
+        </section>
+      </div>
+
+      <!-- SELLER DASHBOARD VIEW -->
+      <div id="sellerView" class="space-y-6 hidden">
+        <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full uppercase">Seller Panel</span>
+              <h2 class="text-xl font-bold text-slate-900 mt-2">Manage Store Inventory</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Update live stock levels and operating status for local shoppers.</p>
+            </div>
+            <div id="sellerStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1.5 cursor-pointer" onclick="toggleStoreStatus()">
+              <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span> Store OPEN
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- Add Product Form -->
+          <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Add / Restock Item</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input type="text" id="newProdName" placeholder="Item Name (e.g., Whole Milk)" class="p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+              <input type="number" id="newProdPrice" placeholder="Price (Unit)" class="p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+              <input type="number" id="newProdStock" placeholder="Quantity in Stock" class="p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+            </div>
+            <button onclick="addNewProduct()" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-lg transition-all shadow-xs">Publish Item to Local Stock</button>
+          </div>
+        </section>
+
+        <!-- Current Live Inventory -->
+        <section class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Your Active Store Listings</h3>
+          <div id="sellerInventoryList" class="space-y-2">
+            <!-- Populated dynamically -->
+          </div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <footer class="text-center py-6 text-xs text-slate-400 border-t border-slate-200 mt-12 bg-white">
+    NearbyStock Platform &bull; Live Area Synchronized
+  </footer>
+
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 text-center relative">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+      <div class="w-12 h-12 bg-sky-50 text-sky-600 rounded-full flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.344-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c7.058 0 11.738-4.964 11.738-11.96 0-.828-.088-1.458-.198-2.235H12.24z"/></svg>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-900">Sign in to NearbyStock</h3>
+        <p class="text-xs text-slate-500 mt-1">Connect your Google Account to manage inventory or save preferred store locations.</p>
+      </div>
+      <button onclick="simulateGoogleLogin()" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs py-3 rounded-xl shadow-xs transition-all">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.344-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c7.058 0 11.738-4.964 11.738-11.96 0-.828-.088-1.458-.198-2.235H12.24z"/></svg>
+        Continue with Google Account
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // App State
+    let currentCurrency = '₹';
+    let currencyCode = 'INR';
+    let currentUser = null;
+    let activeRole = 'consumer';
+    let activeCategory = 'All';
+
+    // Mock Database
+    let stores = [
+      {
+        id: 1,
+        name: "Central Fresh Groceries",
+        category: "Groceries",
+        isOpen: true,
+        distance: "0.8 km away",
+        address: "Kottayam Bypass Rd",
+        items: [
+          { name: "Whole Milk (1L)", price: 54, stock: 18 },
+          { name: "Organic Bread", price: 40, stock: 7 },
+          { name: "Fresh Farm Eggs", price: 75, stock: 30 },
+          { name: "Basmati Rice (1kg)", price: 120, stock: 45 }
+        ]
+      },
+      {
+        id: 2,
+        name: "Lifeline Pharmacy & Health",
+        category: "Pharmacy",
+        isOpen: true,
+        distance: "1.2 km away",
+        address: "Kanjikuzhy Junction",
+        items: [
+          { name: "Paracetamol 500mg", price: 25, stock: 120 },
+          { name: "Digital Thermometer", price: 350, stock: 12 },
+          { name: "Hand Sanitizer 500ml", price: 180, stock: 25 }
+        ]
+      },
+      {
+        id: 3,
+        name: "BuildWell Hardware & Tools",
+        category: "Hardware",
+        isOpen: false,
+        distance: "2.4 km away",
+        address: "Eerayil Kadavu",
+        items: [
+          { name: "LED Bulb 9W", price: 110, stock: 50 },
+          { name: "Multi-bit Screwdriver Set", price: 450, stock: 6 },
+          { name: "PVC Duct Tape", price: 90, stock: 14 }
+        ]
+      }
+    ];
+
+    function switchRole(role) {
+      activeRole = role;
+      document.getElementById('roleConsumerBtn').className = role === 'consumer' ? 'px-3 py-1.5 rounded-lg bg-white shadow-xs text-slate-900 transition-all font-semibold' : 'px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-900 transition-all';
+      document.getElementById('roleSellerBtn').className = role === 'seller' ? 'px-3 py-1.5 rounded-lg bg-white shadow-xs text-slate-900 transition-all font-semibold' : 'px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-900 transition-all';
+
+      if(role === 'consumer') {
+        document.getElementById('consumerView').classList.remove('hidden');
+        document.getElementById('sellerView').classList.add('hidden');
+        renderConsumerStores();
+      } else {
+        document.getElementById('consumerView').classList.add('hidden');
+        document.getElementById('sellerView').classList.remove('hidden');
+        renderSellerInventory();
+      }
+    }
+
+    function detectLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // Success: map coordinates to currency/region
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            // Basic region heuristic example: India vs International boundary
+            if (lat > 6 && lat < 36 && lon > 68 && lon < 98) {
+              currentCurrency = '₹';
+              currencyCode = 'INR';
+              document.getElementById('locationText').innerText = `GPS Locked: Kottayam / Kerala Region`;
+            } else {
+              currentCurrency = '$';
+              currencyCode = 'USD';
+              document.getElementById('locationText').innerText = `GPS Locked: (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+            }
+            document.getElementById('currencyBadge').innerText = `Currency: ${currentCurrency} ${currencyCode}`;
+            renderConsumerStores();
+          },
+          (error) => {
+            alert("Unable to retrieve your location. Default area applied.");
+          }
+        );
+      } else {
+        alert("Geolocation is not supported by your browser.");
+      }
+    }
+
+    function filterCategory(cat) {
+      activeCategory = cat;
+      ['All', 'Groceries', 'Pharmacy', 'Hardware', 'Household'].forEach(c => {
+        const btn = document.getElementById(`cat-${c}`);
+        if(btn) {
+          if(c === cat) {
+            btn.className = "px-3.5 py-2 bg-slate-900 text-white rounded-lg font-medium whitespace-nowrap shadow-xs transition-all";
+          } else {
+            btn.className = "px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium whitespace-nowrap transition-all";
+          }
+        }
+      });
+      renderConsumerStores();
+    }
+
+    function filterStores() {
+      renderConsumerStores();
+    }
+
+    function renderConsumerStores() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const container = document.getElementById('storesContainer');
+      container.innerHTML = '';
+
+      let filtered = stores.filter(store => {
+        const matchesCategory = activeCategory === 'All' || store.category === activeCategory;
+        const matchesQuery = store.name.toLowerCase().includes(query) || 
+                             store.address.toLowerCase().includes(query) ||
+                             store.items.some(item => item.name.toLowerCase().includes(query));
+        return matchesCategory && matchesQuery;
+      });
+
+      document.getElementById('storeCountLabel').innerText = `Showing ${filtered.length} stores`;
+
+      if(filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center space-y-3">
+            <p class="text-base font-semibold text-slate-800">No stores found matching your criteria.</p>
+            <p class="text-xs text-slate-500">Try searching for other items or broadening your category filters.</p>
+          </div>`;
+        return;
+      }
+
+      filtered.forEach(store => {
+        let itemsHtml = store.items.map(item => `
+          <div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 last:border-0">
+            <span class="text-slate-700 font-medium">${item.name}</span>
+            <div class="flex items-center gap-3">
+              <span class="font-bold text-slate-900">${currentCurrency}${item.price}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${item.stock > 5 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${item.stock > 0 ? `${item.stock} in stock` : 'Out of stock'}</span>
+            </div>
+          </div>
+        `).join('');
+
+        container.innerHTML += `
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3 hover:border-slate-300 transition-all">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-slate-900 text-base">${store.name}</h4>
+                  <span class="w-2.5 h-2.5 rounded-full ${store.isOpen ? 'bg-emerald-500' : 'bg-rose-400'}" title="${store.isOpen ? 'Open Now' : 'Closed'}"></span>
+                </div>
+                <p class="text-xs text-slate-500">${store.address} &bull; <span class="text-sky-600 font-medium">${store.distance}</span></p>
+              </div>
+              <span class="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">${store.category}</span>
+            </div>
+            
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Available Inventory</p>
+              ${itemsHtml}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderSellerInventory() {
+      const list = document.getElementById('sellerInventoryList');
+      list.innerHTML = '';
+      
+      // Assume store #1 is managed by seller for demo
+      const myStore = stores[0];
+      
+      myStore.items.forEach((item, idx) => {
+        list.innerHTML += `
+          <div class="bg-white border border-slate-200 p-3.5 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <p class="font-bold text-slate-900">${item.name}</p>
+              <p class="text-slate-500">Price: ${currentCurrency}${item.price} &bull; Stock: <span class="font-semibold text-emerald-600">${item.stock} units</span></p>
+            </div>
+            <button onclick="removeItem(${idx})" class="text-rose-500 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg font-semibold transition-all">Remove</button>
+          </div>
+        `;
+      });
+    }
+
+    function addNewProduct() {
+      const name = document.getElementById('newProdName').value;
+      const price = parseFloat(document.getElementById('newProdPrice').value);
+      const stock = parseInt(document.getElementById('newProdStock').value);
+
+      if(!name || isNaN(price) || isNaN(stock)) {
+        alert("Please fill out all product fields properly.");
+        return;
+      }
+
+      stores[0].items.push({ name, price, stock });
+      document.getElementById('newProdName').value = '';
+      document.getElementById('newProdPrice').value = '';
+      document.getElementById('newProdStock').value = '';
+      renderSellerInventory();
+    }
+
+    function removeItem(idx) {
+      stores[0].items.splice(idx, 1);
+      renderSellerInventory();
+    }
+
+    function toggleStoreStatus() {
+      stores[0].isOpen = !stores[0].isOpen;
+      const badge = document.getElementById('sellerStatusBadge');
+      if(stores[0].isOpen) {
+        badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1.5 cursor-pointer";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span> Store OPEN`;
+      } else {
+        badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 flex items-center gap-1.5 cursor-pointer";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Store CLOSED`;
+      }
+    }
+
+    // Auth Simulation
+    function openAuthModal() {
+      if(currentUser) {
+        if(confirm(`Signed in as ${currentUser}. Sign out?`)) {
+          currentUser = null;
+          document.getElementById('authButtonText').innerText = "Sign in";
+        }
+        return;
+      }
+      document.getElementById('authModal').classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function simulateGoogleLogin() {
+      currentUser = "Joshua Saji (Google Account)";
+      document.getElementById('authButtonText').innerText = "Joshua Saji";
+      closeAuthModal();
+      alert("Successfully authenticated with Google Account!");
+    }
+
+    // Initialize UI view
+    renderConsumerStores();
+  </script>
+</body>
+</html>
